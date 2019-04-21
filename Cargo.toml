@@ -5,3 +5,4 @@ authors = ["Neeraj Jaiswal <neerajj85@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+dirs = "1.0.5"
