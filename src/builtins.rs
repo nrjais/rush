@@ -8,11 +8,10 @@ use std::path::PathBuf;
 
 type Builtin = fn(Vec<String>) -> Result<String, Error>;
 
-pub fn builtins() -> HashMap<String, Builtin, RandomState> {
+pub fn builtins() -> HashMap<String, Builtin> {
   let mut builtins: HashMap<String, Builtin, RandomState> = HashMap::new();
-
   builtins.insert(String::from("cd"), builtin_cd);
-
+  builtins.insert(String::from("exit"), builtin_exit);
   builtins
 }
 
@@ -22,4 +21,8 @@ fn builtin_cd(args: Vec<String>) -> Result<String, Error> {
       .unwrap_or_else(|| dirs::home_dir().unwrap());
 
   env::set_current_dir(path).map(|_| String::new())
+}
+
+fn builtin_exit(_: Vec<String>) -> Result<String, Error> {
+  std::process::exit(0)
 }
