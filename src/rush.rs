@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::rush::Rush::{Bin, Empty};
 
 pub enum Rush {
@@ -7,10 +9,10 @@ pub enum Rush {
 
 impl Rush {
   pub fn from(line: String) -> Rush {
-    let tokens = tokenize(line);
+    let tokens = expand_vars(tokenize(line));
     let mut iter = tokens.iter();
     if let Some(c) = iter.next() {
-      let args = iter.map(|s| s.to_string()).collect::<Vec<_>>();
+      let args = iter.map(|s| s.to_string()).collect();
       Bin(c.to_string(), args)
     } else {
       Empty
@@ -42,4 +44,20 @@ fn tokenize(input: String) -> Vec<String> {
   }
   tokens.push(token);
   tokens
+}
+
+fn expand_vars(tokens: Vec<String>) -> Vec<String> {
+  let mut expanded_tokens = Vec::new();
+  for token in tokens.iter() {
+    expanded_tokens.push(expand(token).to_owned());
+  }
+  expanded_tokens
+}
+
+fn expand(token: &str) -> String {
+  if token.starts_with('$') {
+    env::var(token.trim_start_matches('$')).unwrap_or_default()
+  } else {
+    token.to_owned()
+  }
 }
