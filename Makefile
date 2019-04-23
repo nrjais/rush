@@ -1,3 +1,6 @@
+start:
+	cargo run
+
 docker:
 	@echo "Building image"
 	docker build . -t rush

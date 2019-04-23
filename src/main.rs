@@ -1,9 +1,10 @@
-use std::process::Command;
+use std::process::{Command, Output, ExitStatus};
 use rush::rush::Rush;
 use rush::stdio::*;
 use std::env;
 use std::io::Error;
 use rush::builtins::builtins;
+use std::os::unix::process::ExitStatusExt;
 
 fn main() {
   let greeting = "Welcome to RUSH.......";
@@ -12,7 +13,9 @@ fn main() {
   loop {
     print(build_prompt());
     match launch(Rush::from(read_line())) {
-      Ok(output) => print(output),
+      Ok(output) => {
+        print(String::from_utf8(output.stdout).unwrap_or_default());
+      }
       Err(err) => println(err.to_string())
     }
   }
@@ -23,7 +26,7 @@ fn build_prompt() -> String {
   env::current_dir().unwrap().to_string_lossy().to_string() + prompt
 }
 
-fn launch(command: Rush) -> Result<String, Error> {
+fn launch(command: Rush) -> Result<Output, Error> {
   match command {
     Rush::Bin(cmd, args) => {
       builtins()
@@ -31,15 +34,19 @@ fn launch(command: Rush) -> Result<String, Error> {
           .map_or_else(|| execute(cmd, args.clone()),
                        |builtin| builtin(args.clone()))
     }
-    Rush::Empty => Result::Ok(String::new()),
+    Rush::Empty => Ok(Output {
+      stderr: Vec::new(),
+      stdout: Vec::new(),
+      status: ExitStatus::from_raw(0),
+    }),
   }
 }
 
-fn execute(cmd: String, args: Vec<String>) -> Result<String, Error> {
+fn execute(cmd: String, args: Vec<String>) -> Result<Output, Error> {
   Command::new(cmd)
       .args(args)
-      .output()
-      .map(|o| String::from_utf8(o.stdout).unwrap_or_default())
+      .spawn()
+      .map(|c| c.wait_with_output())?
 }
 
 

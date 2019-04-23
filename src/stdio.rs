@@ -12,6 +12,11 @@ pub fn print(string: String) {
   io::stdout().flush().unwrap();
 }
 
+pub fn print_err(string: String) {
+  io::stderr().write(string.as_bytes()).unwrap();
+  io::stderr().flush().unwrap();
+}
+
 pub fn println(string: String) {
   print(string + "\n");
 }
