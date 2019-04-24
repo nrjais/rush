@@ -42,7 +42,9 @@ fn tokenize(input: String) -> Vec<String> {
       }
     }
   }
-  tokens.push(token);
+  if !input.is_empty() {
+    tokens.push(token);
+  }
   tokens
 }
 

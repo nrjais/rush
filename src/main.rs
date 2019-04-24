@@ -16,7 +16,7 @@ fn main() {
       Ok(output) => {
         print(String::from_utf8(output.stdout).unwrap_or_default());
       }
-      Err(err) => println(err.to_string())
+      Err(err) => println_err(err.to_string())
     }
   }
 }

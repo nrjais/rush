@@ -20,3 +20,7 @@ pub fn print_err(string: String) {
 pub fn println(string: String) {
   print(string + "\n");
 }
+
+pub fn println_err(string: String) {
+  print_err(string + "\n");
+}

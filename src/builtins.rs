@@ -4,9 +4,9 @@ use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use std::env;
 use std::io::Error;
-use std::path::PathBuf;
-use std::process::{Output, ExitStatus};
 use std::os::unix::process::ExitStatusExt;
+use std::path::PathBuf;
+use std::process::{ExitStatus, Output};
 
 type Builtin = fn(Vec<String>) -> Result<Output, Error>;
 
@@ -35,14 +35,18 @@ fn builtin_exit(_: Vec<String>) -> Result<Output, Error> {
 }
 
 fn builtin_let(args: Vec<String>) -> Result<Output, Error> {
-  if let Some(binding) = args.get(0) {
-    let mut key_val = binding.split('=');
-    env::set_var(key_val.next().unwrap(), key_val.next().unwrap())
+  if args.len() != 2 {
+    Ok(Output {
+      stderr: format!("Expected 2 arguments found {}", args.len()).into_bytes(),
+      stdout: Vec::new(),
+      status: ExitStatus::from_raw(1),
+    })
+  } else {
+    env::set_var(args.get(0).unwrap(), args.get(1).unwrap());
+    Ok(Output {
+      stderr: Vec::new(),
+      stdout: Vec::new(),
+      status: ExitStatus::from_raw(0),
+    })
   }
-
-  Ok(Output {
-    stderr: Vec::new(),
-    stdout: Vec::new(),
-    status: ExitStatus::from_raw(0),
-  })
 }
