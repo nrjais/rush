@@ -15,6 +15,7 @@ fn main() {
     match launch(Rush::from(read_line())) {
       Ok(output) => {
         print(String::from_utf8(output.stdout).unwrap_or_default());
+        println_err(String::from_utf8(output.stderr).unwrap_or_default());
       }
       Err(err) => println_err(err.to_string())
     }
