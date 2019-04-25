@@ -6,7 +6,7 @@ use std::env;
 use std::io::Error;
 use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
-use std::process::{ExitStatus, Output};
+use std::process::ExitStatus;
 
 type Builtin = fn(Vec<String>) -> Result<ExitStatus, Error>;
 

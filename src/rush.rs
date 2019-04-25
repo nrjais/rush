@@ -1,6 +1,6 @@
-use std::env;
-
-use crate::rush::Rush::{Bin, Empty};
+use crate::rush::Rush::*;
+use crate::token::Token;
+use crate::token::Token::Value;
 
 pub enum Rush {
   Bin(String, Vec<String>),
@@ -10,17 +10,16 @@ pub enum Rush {
 impl Rush {
   pub fn from(line: String) -> Rush {
     let tokens = expand_vars(tokenize(line));
-    let mut iter = tokens.iter();
+    let mut iter = tokens.iter().filter_map(|t| t.value());
     if let Some(c) = iter.next() {
-      let args = iter.map(|s| s.to_string()).collect();
-      Bin(c.to_string(), args)
+      Bin(c, iter.collect())
     } else {
       Empty
     }
   }
 }
 
-fn tokenize(input: String) -> Vec<String> {
+fn tokenize(input: String) -> Vec<Token> {
   let mut quote = false;
   let mut escape = false;
   let mut token = String::new();
@@ -28,38 +27,26 @@ fn tokenize(input: String) -> Vec<String> {
 
   for c in input.chars() {
     match c {
-      '"' if !escape => {
-        quote = !quote;
-      }
+      '"' if !escape => quote = !quote,
+      '\\' => escape = true,
       ' ' if !escape && !quote => {
-        tokens.push(token);
+        tokens.push(Value(token));
         token = String::new();
       }
-      '\\' => escape = true,
       _ => {
         token.push(c);
         escape = false;
       }
     }
   }
-  if !input.is_empty() {
-    tokens.push(token);
-  }
+  tokens.push(Value(token));
   tokens
 }
 
-fn expand_vars(tokens: Vec<String>) -> Vec<String> {
+fn expand_vars(tokens: Vec<Token>) -> Vec<Token> {
   let mut expanded_tokens = Vec::new();
   for token in tokens.iter() {
-    expanded_tokens.push(expand(token).to_owned());
+    expanded_tokens.push(token.expand());
   }
   expanded_tokens
-}
-
-fn expand(token: &str) -> String {
-  if token.starts_with('$') {
-    env::var(token.trim_start_matches('$')).unwrap_or_default()
-  } else {
-    token.to_owned()
-  }
 }
