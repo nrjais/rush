@@ -2,18 +2,18 @@ use crate::token::Token::{Empty, Value};
 use std::env;
 use std::env::VarError;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Token {
   Value(String),
   Empty,
 }
 
 impl Token {
-  pub fn from(s: &str) -> Self {
+  pub fn from(s: String) -> Self {
     if s.is_empty() {
       Empty
     } else {
-      Value(s.to_owned())
+      Value(s)
     }
   }
 
