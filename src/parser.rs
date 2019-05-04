@@ -1,34 +1,9 @@
+use std::iter::Peekable;
+use std::str::Chars;
 use crate::token::Token;
 
 trait VecExt<T> {
   fn push_value(&mut self, ele: T);
-}
-
-pub fn parse(input: String) -> Vec<Token> {
-  let mut quote = false;
-  let mut escape = false;
-  let mut token = String::new();
-  let mut tokens = Vec::new();
-
-  let mut iter = input.chars().peekable();
-
-  while let Some(c) = iter.next() {
-    match c {
-      '"' if !escape => quote = !quote,
-      '\\' => escape = true,
-      ' ' if !escape && !quote => {
-        tokens.push_value(Token::from(token));
-        token = String::new();
-      }
-      _ => {
-        token.push(c);
-        escape = false;
-      }
-    }
-  }
-
-  tokens.push_value(Token::from(token));
-  tokens
 }
 
 impl VecExt<Token> for Vec<Token> {
@@ -39,15 +14,95 @@ impl VecExt<Token> for Vec<Token> {
   }
 }
 
+pub fn parse(input: String) -> Vec<Token> {
+  let mut tokens = Vec::new();
+  let mut iter = input.chars().peekable();
+
+  while let Some(c) = iter.peek() {
+    let token = match c {
+      '"' => consume_string(&mut iter),
+      _ => consume_word(&mut iter),
+    };
+
+    tokens.push_value(token);
+  }
+  tokens
+}
+
+fn consume_word(iter: &mut Peekable<Chars>) -> Token {
+  let mut token = String::new();
+  while let Some(c) = iter.next() {
+    let next = iter.peek().map(|c| c.to_owned());
+    match c {
+      '\\' if next == Some(' ') => {
+        token.push(iter.next().unwrap_or_default())
+      }
+      ' ' => break,
+      _ => token.push(c)
+    }
+  }
+
+  Token::from(token)
+}
+
+fn consume_string(iter: &mut Peekable<Chars>) -> Token {
+  let mut token = String::new();
+  let _ = iter.next(); // Ignore first already seen quote
+  while let Some(c) = iter.next() {
+    let next = iter.peek().map(|c| c.to_owned());;
+    match c {
+      '\\' if next == Some('"') => {
+        token.push(iter.next().unwrap_or_default())
+      }
+      '"' => break,
+      _ => token.push(c)
+    }
+  }
+
+  Token::from(token)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//*****Tests**************************************************************************************//
+////////////////////////////////////////////////////////////////////////////////////////////////////
 #[cfg(test)]
 pub mod tests {
   use crate::parser::parse;
   use crate::token::Token;
+  use crate::token::Token::Value;
 
   #[test]
-  fn should_parse() {
+  fn should_parse_empty_string() {
     let actual = parse("".to_owned());
     let expected: Vec<Token> = vec![];
+    assert_eq!(expected, actual)
+  }
+
+  #[test]
+  fn should_parse_multiple_words() {
+    let actual = parse("hello world".to_owned());
+    let expected: Vec<Token> = vec![Value(String::from("hello")), Value(String::from("world"))];
+    assert_eq!(expected, actual)
+  }
+
+  #[test]
+  fn should_parse_word_with_string() {
+    let actual = parse("echo \"hello world\"".to_owned());
+    let expected: Vec<Token> = vec![Value(String::from("echo")), Value(String::from("hello world"))];
+    assert_eq!(expected, actual)
+  }
+
+  #[test]
+  fn should_parse_word_with_escaped_space_string() {
+    let actual = parse("echo hello\\ world".to_owned());
+    let expected: Vec<Token> = vec![Value(String::from("echo")), Value(String::from("hello world"))];
+    assert_eq!(expected, actual)
+  }
+
+  #[test]
+  fn should_parse_word_joined_strings() {
+    let actual = parse("echo \"hello\"\"world\"".to_owned());
+    let expected: Vec<Token> = vec![Value(String::from("echo")), Value(String::from("hello world"))];
     assert_eq!(expected, actual)
   }
 }
