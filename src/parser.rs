@@ -1,6 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 use crate::token::Token;
+use crate::token::Token::{Values, Value};
 
 trait VecExt<T> {
   fn push_value(&mut self, ele: T);
@@ -20,12 +21,12 @@ pub fn parse(input: String) -> Vec<Token> {
 
   while let Some(c) = iter.peek() {
     let token = match c {
-      '"' => consume_string(&mut iter),
+      '"' => consume_multiple_strings(&mut iter),
       _ => consume_word(&mut iter),
     };
-
     tokens.push_value(token);
   }
+
   tokens
 }
 
@@ -42,14 +43,26 @@ fn consume_word(iter: &mut Peekable<Chars>) -> Token {
     }
   }
 
-  Token::from(token)
+  Value(token)
 }
 
-fn consume_string(iter: &mut Peekable<Chars>) -> Token {
+fn consume_multiple_strings(iter: &mut Peekable<Chars>) -> Token {
+  let mut values = Vec::new();
+  while let Some(c) = iter.peek() {
+    match c {
+      '"' => values.push(consume_string(iter)),
+      _ => break
+    }
+  }
+
+  Values(values)
+}
+
+fn consume_string(iter: &mut Peekable<Chars>) -> String {
   let mut token = String::new();
   let _ = iter.next(); // Ignore first already seen quote
   while let Some(c) = iter.next() {
-    let next = iter.peek().map(|c| c.to_owned());;
+    let next = iter.peek().map(|c| c.to_owned());
     match c {
       '\\' if next == Some('"') => {
         token.push(iter.next().unwrap_or_default())
@@ -59,17 +72,18 @@ fn consume_string(iter: &mut Peekable<Chars>) -> Token {
     }
   }
 
-  Token::from(token)
+  token
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //*****Tests**************************************************************************************//
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #[cfg(test)]
 pub mod tests {
   use crate::parser::parse;
   use crate::token::Token;
-  use crate::token::Token::Value;
+  use crate::token::Token::{Value, Values};
 
   #[test]
   fn should_parse_empty_string() {
@@ -88,7 +102,7 @@ pub mod tests {
   #[test]
   fn should_parse_word_with_string() {
     let actual = parse("echo \"hello world\"".to_owned());
-    let expected: Vec<Token> = vec![Value(String::from("echo")), Value(String::from("hello world"))];
+    let expected: Vec<Token> = vec![Value(String::from("echo")), Values(vec![String::from("hello world")])];
     assert_eq!(expected, actual)
   }
 
@@ -102,7 +116,7 @@ pub mod tests {
   #[test]
   fn should_parse_word_joined_strings() {
     let actual = parse("echo \"hello\"\"world\"".to_owned());
-    let expected: Vec<Token> = vec![Value(String::from("echo")), Value(String::from("hello world"))];
+    let expected: Vec<Token> = vec![Value(String::from("echo")), Values(vec![String::from("hello"), String::from("world")])];
     assert_eq!(expected, actual)
   }
 }

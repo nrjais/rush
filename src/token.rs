@@ -1,26 +1,20 @@
-use crate::token::Token::{Empty, Value};
+use crate::token::Token::{Empty, Value, Values};
 use std::env;
 use std::env::VarError;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
   Value(String),
+  Values(Vec<String>),
   Empty,
 }
 
 impl Token {
-  pub fn from(s: String) -> Self {
-    if s.is_empty() {
-      Empty
-    } else {
-      Value(s)
-    }
-  }
-
   pub fn value(&self) -> Option<String> {
     match self {
-      Token::Value(s) => Some(s.to_owned()),
-      _ => None,
+      Empty => None,
+      Value(s) => Some(s.to_owned()),
+      Values(s) => Some(s.first().map(|s| s.to_owned()).unwrap_or_default().to_owned())
     }
   }
 
@@ -134,21 +128,21 @@ pub mod tests {
   }
 
   #[test]
-  fn should_expand_var(){
+  fn should_expand_var() {
     let mut var = String::from("$H");
     let actual = expand(&mut var, |_| Ok("Hello".to_owned()));
     assert_eq!(String::from("Hello"), actual)
   }
 
   #[test]
-  fn should_not_expand_var(){
+  fn should_not_expand_var() {
     let mut var = String::from("H");
     let actual = expand(&mut var, |_| Ok("Hello".to_owned()));
     assert_eq!(String::from("H"), actual)
   }
 
   #[test]
-  fn should_not_expand_var_when_escaped(){
+  fn should_not_expand_var_when_escaped() {
     let mut var = String::from("\\$H");
     let actual = expand(&mut var, |_| Ok("Hello".to_owned()));
     assert_eq!(String::from("$H"), actual)
