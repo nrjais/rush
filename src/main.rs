@@ -5,7 +5,8 @@ use std::process::{Command, ExitStatus};
 
 use rush::builtins::builtins;
 use rush::rush::Rush;
-use rush::stdio::*;
+use rush::input::*;
+use rush::output::{print, println_err};
 
 fn main() {
   let greeting = "Welcome to RUSH.......";
