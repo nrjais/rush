@@ -55,17 +55,21 @@ impl Input {
   }
 
   fn left(&mut self) {
-    self.cursor += 1;
-    self.right.push_front(self.left.pop().unwrap() as u8);
-    write!(self.s, "{}", termion::cursor::Left(1)).unwrap();
-    self.flush();
+    if let Some(c) = self.left.pop() {
+      self.cursor += 1;
+      self.right.push_front(c as u8);
+      write!(self.s, "{}", termion::cursor::Left(1)).unwrap();
+      self.flush();
+    }
   }
 
   fn right(&mut self) {
-    self.cursor -= 1;
-    self.left.push(self.right.pop_front().unwrap() as char);
-    write!(self.s, "{}", termion::cursor::Right(1)).unwrap();
-    self.flush();
+    if let Some(c) = self.right.pop_front() {
+      self.cursor -= 1;
+      self.left.push(c as char);
+      write!(self.s, "{}", termion::cursor::Right(1)).unwrap();
+      self.flush();
+    }
   }
 
   fn backspace(&mut self) {
@@ -81,19 +85,20 @@ impl Input {
 }
 
 pub fn read_line() -> String {
-  let mut input = Input::new(io::stdout().into_raw_mode().unwrap());
+//  String::from("echo hello | grep h")
+   let mut input = Input::new(io::stdout().into_raw_mode().unwrap());
 
-  for key in io::stdin().keys() {
-    match key.unwrap() {
-      Key::Backspace => { input.backspace() }
-      Key::Left => { input.left() }
-      Key::Right => { input.right() }
-      Key::Char(c) if c == '\n' => { break; }
-      Key::Char(c) => {
-        input.push(c);
-      }
-      _ => {}
-    }
-  }
-  input.get()
+   for key in io::stdin().keys() {
+     match key.unwrap() {
+       Key::Backspace => { input.backspace() }
+       Key::Left => { input.left() }
+       Key::Right => { input.right() }
+       Key::Char(c) if c == '\n' => { break; }
+       Key::Char(c) => {
+         input.push(c);
+       }
+       _ => {}
+     }
+   }
+   input.get()
 }

@@ -1,4 +1,3 @@
-use crate::token::Token::{Empty, Value, Values};
 use std::env;
 use std::env::VarError;
 
@@ -6,15 +5,17 @@ use std::env::VarError;
 pub enum Token {
   Value(String),
   Values(Vec<String>),
+  Pipe,
   Empty,
 }
 
 impl Token {
   pub fn value(&self) -> Option<String> {
     match self {
-      Empty => None,
-      Value(s) => Some(s.to_owned()),
-      Values(s) => Some(s.first().map(|s| s.to_owned()).unwrap_or_default().to_owned())
+      Token::Empty => None,
+      Token::Value(s) => Some(s.to_owned()),
+      Token::Values(s) => Some(s.first().map(|s| s.to_owned()).unwrap_or_default().to_owned()),
+      Token::Pipe => Some("|".to_owned()),
     }
   }
 
