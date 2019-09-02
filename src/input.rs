@@ -1,34 +1,53 @@
 extern crate termion;
 
 use std::io;
+use std::collections::vec_deque::VecDeque;
 use std::io::{Stdout, Write};
 
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 
+use self::termion::cursor::DetectCursorPos;
 use self::termion::event::Key;
 use self::termion::raw::RawTerminal;
-use std::collections::vec_deque::VecDeque;
 
-struct Input {
+struct InputContext {
   cursor: u16,
   left: String,
+  prompt: String,
   right: VecDeque<u8>,
   s: RawTerminal<Stdout>,
+  cursor_pos: (u16, u16),
+  cursor_edit: (u16, u16),
+  term_width: u16,
+  prev_cursor: Option<u16>,
+  rows: u16,
 }
 
-impl Input {
+impl InputContext {
   fn get(mut self) -> String {
     writeln!(self.s, "\r").unwrap();
     let right = self.right_string();
     self.left + right.as_str()
   }
-  fn new(s: RawTerminal<Stdout>) -> Input {
-    Input {
-      cursor: 0,
+
+  fn new(prompt: String, mut s: RawTerminal<Stdout>) -> InputContext {
+    let cursor_pos = s.cursor_pos().unwrap();
+    let mut cursor_edit = cursor_pos;
+    let prompt_len = prompt.len() as u16;
+    cursor_edit.0 = cursor_edit.0 + prompt_len - 2u16;
+
+    InputContext {
+      cursor: prompt_len,
+      prompt,
       left: String::new(),
       right: VecDeque::new(),
       s,
+      cursor_pos,
+      cursor_edit,
+      term_width: termion::terminal_size().unwrap().0,
+      prev_cursor: None,
+      rows: 1,
     }
   }
 
@@ -38,67 +57,91 @@ impl Input {
 
   fn push(&mut self, c: char) {
     self.left.push(c);
-    write!(self.s, "{}", c).unwrap();
-    self.show_right();
-    if self.cursor > 0 {
-      write!(self.s, "{}", termion::cursor::Left(self.cursor)).unwrap();
-    }
-    self.flush();
+    self.incr_cursor_pos();
   }
 
-  fn show_right(&mut self) {
-    write!(self.s, "{}{}", termion::clear::AfterCursor, self.right_string()).unwrap();
+  fn left(&mut self) {
+    if let Some(c) = self.left.pop() {
+      self.right.push_front(c as u8);
+      self.decr_cursor_pos();
+    }
+  }
+
+  fn right(&mut self) {
+    if let Some(c) = self.right.pop_front() {
+      self.left.push(c as char);
+      self.incr_cursor_pos();
+    }
+  }
+
+  fn backspace(&mut self) {
+    if self.left.pop().is_some() {
+      self.decr_cursor_pos();
+    }
+  }
+
+  fn incr_cursor_pos(&mut self) {
+    self.prev_cursor = Option::Some(self.cursor);
+    self.cursor += 1;
+    self.cursor_edit.0 += 1;
+
+    if self.cursor_edit.0 == (self.term_width + 1) {
+      self.cursor_edit.1 += 1;
+      self.cursor_edit.0 = 1;
+      self.rows += 1;
+    }
+
+    self.refresh_line();
+  }
+
+  fn decr_cursor_pos(&mut self) {
+    self.prev_cursor = Option::Some(self.cursor);
+
+    if self.cursor_edit.0 == 1 && self.rows > 1 {
+      self.rows -= 1;
+      self.cursor_edit.1 -= 1;
+      self.cursor_edit.0 = self.term_width + 1;
+    }
+
+    if self.cursor > self.prompt.len() as u16 {
+      self.cursor_edit.0 -= 1;
+    }
+
+    self.cursor -= 1;
+
+    self.refresh_line();
   }
 
   fn flush(&mut self) {
     self.s.flush().unwrap();
   }
 
-  fn left(&mut self) {
-    if let Some(c) = self.left.pop() {
-      self.cursor += 1;
-      self.right.push_front(c as u8);
-      write!(self.s, "{}", termion::cursor::Left(1)).unwrap();
-      self.flush();
-    }
-  }
-
-  fn right(&mut self) {
-    if let Some(c) = self.right.pop_front() {
-      self.cursor -= 1;
-      self.left.push(c as char);
-      write!(self.s, "{}", termion::cursor::Right(1)).unwrap();
-      self.flush();
-    }
-  }
-
-  fn backspace(&mut self) {
-    if self.left.pop().is_some() {
-      write!(self.s, "{}", termion::cursor::Left(1)).unwrap();
-      self.show_right();
-      if self.cursor > 0 {
-        write!(self.s, "{}", termion::cursor::Left(self.cursor)).unwrap();
-      }
-      self.flush();
-    }
+  fn refresh_line(&mut self) {
+    write!(self.s, "{}{}{}{}{}{}",
+           termion::cursor::Goto(self.cursor_pos.0, self.cursor_pos.1),
+           termion::clear::AfterCursor,
+           self.prompt,
+           self.left,
+           self.right_string(),
+           termion::cursor::Goto(self.cursor_edit.0, self.cursor_edit.1))
+        .unwrap();
+    self.flush();
   }
 }
 
-pub fn read_line() -> String {
-//  String::from("echo hello | grep h")
-   let mut input = Input::new(io::stdout().into_raw_mode().unwrap());
+pub fn read_line(prompt: String) -> String {
+  let mut input = InputContext::new(prompt, io::stdout().into_raw_mode().unwrap());
+  input.refresh_line();
 
-   for key in io::stdin().keys() {
-     match key.unwrap() {
-       Key::Backspace => { input.backspace() }
-       Key::Left => { input.left() }
-       Key::Right => { input.right() }
-       Key::Char(c) if c == '\n' => { break; }
-       Key::Char(c) => {
-         input.push(c);
-       }
-       _ => {}
-     }
-   }
-   input.get()
+  for key in io::stdin().keys() {
+    match key.unwrap() {
+      Key::Backspace => input.backspace(),
+      Key::Left => input.left(),
+      Key::Right => input.right(),
+      Key::Char(c) if c == '\n' => break,
+      Key::Char(c) => input.push(c),
+      _ => {}
+    }
+  }
+  input.get()
 }

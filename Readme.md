@@ -17,11 +17,13 @@ cargo run
 * let
 
 ### To be implemented
-* Pipes
-* Output redirection
-* Scripting support
-* More builtins
+* Interactive input
+* Keybindings
 * Completions
 * Syntax highlighting
 * Autosuggestion
 * History support
+* Pipes
+* Output redirection
+* Scripting support
+* More builtins

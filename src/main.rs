@@ -5,7 +5,7 @@ use std::process::{Command, ExitStatus, Stdio, Child};
 
 use rush::builtins::builtins;
 use rush::input::*;
-use rush::output::{print, println_err};
+use rush::output::println_err;
 use rush::rush::Rush;
 
 fn main() {
@@ -13,8 +13,7 @@ fn main() {
   println!("{}", greeting);
 
   loop {
-    print(build_prompt());
-    match launch(Rush::from(read_line())) {
+    match launch(Rush::from(read_line(build_prompt()))) {
       Ok(status) => {
         if let Some(code) = status.code() {
           env::set_var("STATUS", code.to_string())
