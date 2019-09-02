@@ -1,7 +1,7 @@
 extern crate termion;
 
-use std::io;
 use std::collections::vec_deque::VecDeque;
+use std::io;
 use std::io::{Stdout, Write};
 
 use termion::input::TermRead;
@@ -11,16 +11,17 @@ use self::termion::cursor::DetectCursorPos;
 use self::termion::event::Key;
 use self::termion::raw::RawTerminal;
 
+const DEFAULT_TERM_SIZE: (u16, u16) = (80, 80);
+
 struct InputContext {
-  cursor: u16,
-  left: String,
-  prompt: String,
-  right: VecDeque<u8>,
   s: RawTerminal<Stdout>,
+  left: String,
+  right: VecDeque<u8>,
+  prompt: String,
+  cursor: u16,
   cursor_pos: (u16, u16),
   cursor_edit: (u16, u16),
-  term_width: u16,
-  prev_cursor: Option<u16>,
+  term_size: (u16, u16),
   rows: u16,
 }
 
@@ -45,8 +46,7 @@ impl InputContext {
       s,
       cursor_pos,
       cursor_edit,
-      term_width: termion::terminal_size().unwrap().0,
-      prev_cursor: None,
+      term_size: termion::terminal_size().unwrap_or(DEFAULT_TERM_SIZE),
       rows: 1,
     }
   }
@@ -81,33 +81,34 @@ impl InputContext {
   }
 
   fn incr_cursor_pos(&mut self) {
-    self.prev_cursor = Option::Some(self.cursor);
     self.cursor += 1;
     self.cursor_edit.0 += 1;
 
-    if self.cursor_edit.0 == (self.term_width + 1) {
+    if self.cursor_edit.0 == (self.term_size.0 + 1) {
       self.cursor_edit.1 += 1;
       self.cursor_edit.0 = 1;
       self.rows += 1;
+    }
+
+    if self.cursor_edit.1 > self.term_size.1 {
+      self.cursor_edit.1 -= 1;
+      self.cursor_pos.1 -= 1;
     }
 
     self.refresh_line();
   }
 
   fn decr_cursor_pos(&mut self) {
-    self.prev_cursor = Option::Some(self.cursor);
-
     if self.cursor_edit.0 == 1 && self.rows > 1 {
       self.rows -= 1;
       self.cursor_edit.1 -= 1;
-      self.cursor_edit.0 = self.term_width + 1;
+      self.cursor_edit.0 = self.term_size.0 + 1;
     }
 
     if self.cursor > self.prompt.len() as u16 {
       self.cursor_edit.0 -= 1;
+      self.cursor -= 1;
     }
-
-    self.cursor -= 1;
 
     self.refresh_line();
   }
