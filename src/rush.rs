@@ -19,7 +19,7 @@ impl Rush {
 
     if parsed.contains(&Pipe) {
       partition(tokens)
-    } else if tokens.len() > 0 {
+    } else if !tokens.is_empty() {
       bin(tokens)
     } else {
       Empty
@@ -32,11 +32,13 @@ fn bin(tokens: Vec<String>) -> Rush {
   Bin(iter.next().unwrap().to_owned(), iter.map(|s| s.to_owned()).collect())
 }
 
+const PIPE: &str = "|";
+
 fn partition(tokens: Vec<String>) -> Rush {
   let mut s = Vec::new();
   let mut bins = Vec::new();
   for token in tokens {
-    if token == "|".to_owned() {
+    if PIPE.eq(&token) {
       bins.push(bin(s));
       s = Vec::new();
     } else {
