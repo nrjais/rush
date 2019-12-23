@@ -1,28 +1,24 @@
-extern crate termion;
-
 use std::collections::vec_deque::VecDeque;
 use std::io;
 use std::io::{Stdout, Write};
 
+use termion::cursor::DetectCursorPos;
+use termion::event::Key;
 use termion::input::TermRead;
-use termion::raw::IntoRawMode;
-
-use self::termion::cursor::DetectCursorPos;
-use self::termion::event::Key;
-use self::termion::raw::RawTerminal;
+use termion::raw::{IntoRawMode, RawTerminal};
 
 const DEFAULT_TERM_SIZE: (u16, u16) = (80, 80);
 
 struct InputContext {
-  s: RawTerminal<Stdout>,
-  left: String,
-  right: VecDeque<u8>,
-  prompt: String,
-  cursor: u16,
-  cursor_pos: (u16, u16),
+  s:           RawTerminal<Stdout>,
+  left:        String,
+  right:       VecDeque<u8>,
+  prompt:      String,
+  cursor:      u16,
+  cursor_pos:  (u16, u16),
   cursor_edit: (u16, u16),
-  term_size: (u16, u16),
-  rows: u16,
+  term_size:   (u16, u16),
+  rows:        u16,
 }
 
 impl InputContext {
@@ -118,20 +114,24 @@ impl InputContext {
   }
 
   fn refresh_line(&mut self) {
-    write!(self.s, "{}{}{}{}{}{}",
-           termion::cursor::Goto(self.cursor_pos.0, self.cursor_pos.1),
-           termion::clear::AfterCursor,
-           self.prompt,
-           self.left,
-           self.right_string(),
-           termion::cursor::Goto(self.cursor_edit.0, self.cursor_edit.1))
-        .unwrap();
+    write!(
+      self.s,
+      "{}{}{}{}{}{}",
+      termion::cursor::Goto(self.cursor_pos.0, self.cursor_pos.1),
+      termion::clear::AfterCursor,
+      self.prompt,
+      self.left,
+      self.right_string(),
+      termion::cursor::Goto(self.cursor_edit.0, self.cursor_edit.1)
+    )
+    .unwrap();
     self.flush();
   }
 }
 
 pub fn read_line(prompt: String) -> String {
-  let mut input = InputContext::new(prompt, io::stdout().into_raw_mode().unwrap());
+  let mut input =
+    InputContext::new(prompt, io::stdout().into_raw_mode().unwrap());
   input.refresh_line();
 
   for key in io::stdin().keys() {

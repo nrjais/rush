@@ -1,6 +1,4 @@
-use crate::parser::parse;
 use crate::rush::Rush::*;
-use crate::token::Token::Pipe;
 
 #[derive(Debug)]
 pub enum Rush {
@@ -10,41 +8,7 @@ pub enum Rush {
 }
 
 impl Rush {
-  pub fn from(line: String) -> Rush {
-    let parsed = parse(line);
-    let tokens: Vec<String> = parsed
-        .iter()
-        .filter_map(|t| t.expand().value())
-        .collect();
-
-    if parsed.contains(&Pipe) {
-      partition(tokens)
-    } else if !tokens.is_empty() {
-      bin(tokens)
-    } else {
-      Empty
-    }
+  pub fn from(_line: String) -> Rush {
+    Empty
   }
-}
-
-fn bin(tokens: Vec<String>) -> Rush {
-  let mut iter = tokens.iter();
-  Bin(iter.next().unwrap().to_owned(), iter.map(|s| s.to_owned()).collect())
-}
-
-const PIPE: &str = "|";
-
-fn partition(tokens: Vec<String>) -> Rush {
-  let mut s = Vec::new();
-  let mut bins = Vec::new();
-  for token in tokens {
-    if PIPE.eq(&token) {
-      bins.push(bin(s));
-      s = Vec::new();
-    } else {
-      s.push(token)
-    }
-  }
-  bins.push(bin(s));
-  Piped(bins)
 }

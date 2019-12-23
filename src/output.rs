@@ -1,7 +1,8 @@
 use std::io;
 use std::io::Write;
 
-fn write_to<T>(stream: &mut T, string: String) where T: Write {
+#[allow(clippy::unused_io_amount)]
+fn write_to<T: Write>(stream: &mut T, string: String) {
   stream.write(string.as_bytes()).unwrap();
   stream.flush().unwrap();
 }

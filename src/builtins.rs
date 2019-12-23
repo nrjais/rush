@@ -1,5 +1,3 @@
-extern crate dirs;
-
 use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use std::env;
@@ -19,9 +17,10 @@ pub fn builtins() -> HashMap<String, Builtin> {
 }
 
 fn builtin_cd(args: Vec<String>) -> Result<ExitStatus, Error> {
-  let path = args.get(0)
-      .map(PathBuf::from)
-      .unwrap_or_else(|| dirs::home_dir().unwrap());
+  let path = args
+    .get(0)
+    .map(PathBuf::from)
+    .unwrap_or_else(|| dirs::home_dir().unwrap());
 
   env::set_current_dir(path).map(|_| ExitStatus::from_raw(0))
 }
